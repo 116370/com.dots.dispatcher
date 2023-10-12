@@ -1,20 +1,29 @@
 {
     "name": "com.dots.dispatcher",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "displayName": "DOTS Dispatcher",
     "description": "DOTS Entity as Event Dispatcher.",
-    "unity": "2020.1",
-    "unityRelease": "9f1",
-    "keywords": [
-      "dots",
-      "test"
-    ],
+    "unity": "2022.3",
     "dependencies": {
-        "com.dots.extensions": "1.0.0"
+        "com.unity.entities": "1.0.16",
+        "com.unity.burst": "1.8.8"
     },
     "author": {
       "name": "Gabriel Trabasso",
       "email": "gabr.j.t@gmail.com",
       "url": "https://github.com/gabrjt/dots-dispatcher"
+    },
+    "keywords": [
+      "ECS",
+      "DOTS",
+      "Entity",
+      "Events"
+    ],
+    "samples": [
+    {
+      "displayName": "Sample Example",
+      "description": "",
+      "path": "Samples~/Example"
     }
+  ]
 }
