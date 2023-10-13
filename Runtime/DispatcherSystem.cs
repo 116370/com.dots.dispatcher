@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
-using Unity.Burst;
+using System.Linq;
 using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Jobs;
 
-[AlwaysUpdateSystem]
-public abstract partial class DispatcherSystem : SystemBase
+[WorldSystemFilter(WorldSystemFilterFlags.Default)]
+public partial class DispatcherSystem : SystemBase
 {
     readonly Dictionary<Type, IDispatcherContainer> _dictionary = new Dictionary<Type, IDispatcherContainer>();
 
@@ -24,6 +23,17 @@ public abstract partial class DispatcherSystem : SystemBase
         }
 
         return ((DispatcherContainer<T>)dispatcherContainer).CreateDispatcherQueue();
+    }
+
+    public void PostEvent<T>(T data) where T : unmanaged, IComponentData
+    {
+        if (!_dictionary.TryGetValue(typeof(T), out var dispatcherContainer))
+        {
+            _dictionary.Add(typeof(T), dispatcherContainer = new DispatcherContainer<T>(this));
+        }
+
+        var eque = ((DispatcherContainer<T>)dispatcherContainer).CreateDispatcherQueue();
+        eque.Enqueue(data);
     }
 
     /// <summary>
@@ -51,10 +61,9 @@ public abstract partial class DispatcherSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        if (_dictionary.Count == 0)
-        {
+        if (_dictionary.Count == 0)        
             return;
-        }
+        
 
         foreach (var dispatcherContainer in _dictionary.Values)
         {
@@ -68,11 +77,10 @@ public abstract partial class DispatcherSystem : SystemBase
         void Update();
     }
 
-    class DispatcherContainer<T> : IDispatcherContainer where T : unmanaged, IComponentData
+    internal class DispatcherContainer<T> : IDispatcherContainer where T : unmanaged, IComponentData
     {
-        readonly EntityArchetype _archetype;
         readonly EntityManager _entityManager;
-        readonly bool _isZeroSized;
+        private readonly TypeIndex _typeIndex;
         readonly EntityQuery _query;
         readonly List<NativeQueue<T>> _queueList;
 
@@ -82,8 +90,7 @@ public abstract partial class DispatcherSystem : SystemBase
 
             _entityManager = dispatcherSystem.EntityManager;
             _query = dispatcherSystem.GetEntityQuery(componentType);
-            _archetype = _entityManager.CreateArchetype(componentType);
-            _isZeroSized = componentType.IsZeroSized;
+            _typeIndex = TypeManager.GetTypeIndex(typeof(T));
             _queueList = new List<NativeQueue<T>>();
         }
 
@@ -91,46 +98,38 @@ public abstract partial class DispatcherSystem : SystemBase
         {
             _entityManager.DestroyEntity(_query);
 
-            var entityCount = 0;
+            List<IEventListener<T>> listeners = null;
 
-            if (_isZeroSized)
+            if (Mono.subscribers.TryGetValue(_typeIndex, out var listMono))
             {
-                foreach (var queue in _queueList)
-                {
-                    unsafe
-                    {
-                        new SumZeroSizedEntityCountJob { EntityCount = &entityCount, Queue = queue }.Run();
-                    }
-
-                    queue.Dispose();
-                }
-
-                _entityManager.CreateEntity(_archetype, entityCount);
+                listeners = listMono.OfType<IEventListener<T>>().ToList();
             }
-            else
+
+            foreach (var queue in _queueList)
             {
-                var list = new NativeList<T>(Allocator.TempJob);
-
-                foreach (var queue in _queueList)
+                while (queue.Count != 0)
                 {
-                    unsafe
-                    {
-                        new SumEntityCountJob { EntityCount = &entityCount, Queue = queue, List = list }.Run();
-                    }
-
-                    queue.Dispose();
+                    var comp = queue.Dequeue();
+                    var e = _entityManager.CreateEntity();
+                    _entityManager.AddComponentData(e, comp);
+                    ProduceMonoEvents(listeners, comp, e);
                 }
 
-                _entityManager.CreateEntity(_archetype, entityCount);
-
-                _query.CopyFromComponentDataListAsync(list, out var jobHandle);
-
-                list.Dispose(jobHandle);
-
-                _query.AddDependency(jobHandle);
+                queue.Dispose();
             }
 
             _queueList.Clear();
+        }
+
+        private static void ProduceMonoEvents(List<IEventListener<T>> listeners, T comp, Entity e)
+        {
+            if (listeners != null)
+            {
+                foreach (var listener in listeners)
+                {
+                    listener.OnEvent(e, comp);
+                }
+            }
         }
 
         public void Dispose()
@@ -153,35 +152,32 @@ public abstract partial class DispatcherSystem : SystemBase
 
             return queue;
         }
+    }
 
-        [BurstCompile]
-        unsafe struct SumZeroSizedEntityCountJob : IJob
+    public static class Mono
+    {
+        internal static Dictionary<TypeIndex, List<object>> subscribers = new();
+
+        public static void Subscribe<T1>(IEventListener<T1> listener) where T1 : unmanaged, IComponentData
         {
-            [NativeDisableUnsafePtrRestriction]
-            public int* EntityCount;
-            [ReadOnly]
-            public NativeQueue<T> Queue;
+            var typeIndex = TypeManager.GetTypeIndex(typeof(T1));
 
-            public void Execute()
+            if (!subscribers.TryGetValue(typeIndex, out var list))
             {
-                *EntityCount += Queue.Count;
+                list = new List<object>();
+                subscribers.Add(typeIndex, list);
             }
+
+            list.Add(listener);
         }
 
-        [BurstCompile]
-        unsafe struct SumEntityCountJob : IJob
+        public static void Unsubscribe<T1>(IEventListener<T1> listener) where T1 : unmanaged, IComponentData
         {
-            [NativeDisableUnsafePtrRestriction]
-            public int* EntityCount;
-            [ReadOnly]
-            public NativeQueue<T> Queue;
-            public NativeList<T> List;
+            var typeIndex = TypeManager.GetTypeIndex(typeof(T1));
 
-            public void Execute()
+            if (subscribers.TryGetValue(typeIndex, out var list))
             {
-                *EntityCount += Queue.Count;
-
-                List.AddRange(Queue.ToArray(Allocator.Temp));
+                list.Remove(listener);
             }
         }
     }
