@@ -1,158 +1,240 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
+using Unity.Burst;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
-using Unity.Jobs;
 
-[WorldSystemFilter(WorldSystemFilterFlags.Default)]
-public partial class DispatcherSystem : SystemBase
+public struct EventCommandBuffer
 {
-    readonly Dictionary<Type, IDispatcherContainer> _dictionary = new Dictionary<Type, IDispatcherContainer>();
-
-    /// <summary>
-    /// Creates a NativeQueue which can be used to enqueue Event Data to be created when the DispatcherSystem runs.
-    /// </summary>
-    /// <typeparam name="T">struct, IComponentData</typeparam>
-    /// <returns>NativeQueue</returns>
-    public NativeQueue<T> CreateDispatcherQueue<T>() where T : unmanaged, IComponentData
+    private EntityCommandBuffer buffer;
+    public EventCommandBuffer(Allocator allocator)
     {
-        if (!_dictionary.TryGetValue(typeof(T), out var dispatcherContainer))
-        {
-            _dictionary.Add(typeof(T), dispatcherContainer = new DispatcherContainer<T>(this));
-        }
-
-        return ((DispatcherContainer<T>)dispatcherContainer).CreateDispatcherQueue();
+        buffer = new EntityCommandBuffer(allocator);
     }
 
-    public void PostEvent<T>(T data) where T : unmanaged, IComponentData
+    public EventCommandBuffer(EntityCommandBuffer ecb)
     {
-        if (!_dictionary.TryGetValue(typeof(T), out var dispatcherContainer))
-        {
-            _dictionary.Add(typeof(T), dispatcherContainer = new DispatcherContainer<T>(this));
-        }
-
-        var eque = ((DispatcherContainer<T>)dispatcherContainer).CreateDispatcherQueue();
-        eque.Enqueue(data);
+        buffer = ecb;
     }
 
-    /// <summary>
-    /// Must be used if the DispatcherQueue is enqueueing data in Jobs, i.e. asynchronously.
-    /// Guarantees that the DispatcherSystem will only run after its dependencies,
-    /// which are determined by this function call.
-    /// </summary>
-    /// <param name="dependency">The event producer system dependency</param>
-    public void AddJobHandleForProducer(JobHandle dependency)
+    public void PostEvent<T>(T data = default, PostMonoEvents postData = default) where T : unmanaged, IComponentData
     {
-        Dependency = JobHandle.CombineDependencies(Dependency, dependency);
+        var e = buffer.CreateEntity();
+        buffer.AddComponent(e, data);
+        buffer.AddComponent<DisaptcherClenup>(e);
+        buffer.AddComponent(e, postData);
+
+    }
+
+    public void Playback(EntityManager manager)
+    {
+        buffer.Playback(manager);
+    }
+}
+
+[UpdateInGroup(typeof(InitializationSystemGroup), OrderFirst = true)]
+internal partial class DispatcherGroup : ComponentSystemGroup { }
+
+public struct DisaptcherClenup : IComponentData { }
+public struct PostMonoEvents : IComponentData 
+{
+    public TypeIndex typeIndex;
+}
+
+[UpdateInGroup(typeof(DispatcherGroup))]
+public partial struct DispatcherCleanUpSystem : ISystem
+{
+    private EntityQuery query;
+
+    [BurstCompile]
+    public void OnCreate(ref SystemState state)
+    {
+        query = SystemAPI.QueryBuilder().WithAll<DisaptcherClenup>().Build();
+    }
+
+    [BurstCompile]
+    public void OnUpdate(ref SystemState state)
+    {
+        state.EntityManager.DestroyEntity(query);
+    }
+}
+
+[UpdateAfter(typeof(DispatcherCleanUpSystem))]
+[UpdateInGroup(typeof(DispatcherGroup))]
+public partial class DispatcherSystem : EntityCommandBufferSystem
+{   
+
+    public unsafe struct Singleton : IComponentData, IECBSingleton
+    {
+        internal UnsafeList<EntityCommandBuffer>* pendingBuffers;
+        internal AllocatorManager.AllocatorHandle allocator;
+
+        //public EntityCommandBuffer CreateCommandBuffer(WorldUnmanaged world)
+        //{
+
+        //    var ecb = EntityCommandBufferSystem
+        //        .CreateCommandBuffer(ref *pendingBuffers, allocator, world);
+           
+        //    return ecb;
+        //}
+
+        public EventCommandBuffer CreateEventBuffer(WorldUnmanaged world)
+        {
+            var ecb = EntityCommandBufferSystem
+                .CreateCommandBuffer(ref *pendingBuffers, allocator, world);
+            var eventBUffer = new EventCommandBuffer(ecb);
+            return eventBUffer;
+        }
+
+        // Required by IECBSingleton
+        public void SetPendingBufferList(ref UnsafeList<EntityCommandBuffer> buffers)
+        {
+            var ptr = UnsafeUtility.AddressOf(ref buffers);
+            pendingBuffers = (UnsafeList<EntityCommandBuffer>*)ptr;
+        }
+
+        // Required by IECBSingleton
+        public void SetAllocator(Allocator allocatorIn)
+        {
+            allocator = allocatorIn;
+        }
+
+        // Required by IECBSingleton
+        public void SetAllocator(AllocatorManager.AllocatorHandle allocatorIn)
+        {
+            allocator = allocatorIn;
+        }
+    }
+
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+
+        this.RegisterSingleton<Singleton>(ref PendingBuffers, World.Unmanaged);
     }
 
     protected override void OnDestroy()
     {
         base.OnDestroy();
-
-        foreach (var dispatcherContainer in _dictionary.Values)
-        {
-            dispatcherContainer.Dispose();
-        }
-
-        _dictionary.Clear();
     }
 
     protected override void OnUpdate()
     {
-        if (_dictionary.Count == 0)        
-            return;
-        
+        //if (_dictionary.Count == 0)
+        //    return;
 
-        foreach (var dispatcherContainer in _dictionary.Values)
-        {
-            dispatcherContainer.Update();
-        }
+        //foreach (var dispatcherContainer in _dictionary.Values)
+        //{
+        //    dispatcherContainer.Update();
+        //}
+
+        base.OnUpdate();
+
+        //foreach (var (item , e) in SystemAPI.Query<PostMonoEvents>().WithEntityAccess())
+        //{
+        //    List<IEventListener<T>> listeners = null;
+
+        //    if (Mono.subscribers.TryGetValue(item.typeIndex, out var listMono))
+        //    {
+        //        listeners = listMono.OfType<IEventListener<T>>().ToList();
+        //        ProduceMonoEvents();
+        //    }
+        //}
+       
     }
 
-
-    interface IDispatcherContainer : IDisposable
+    private static void ProduceMonoEvents<T>(List<IEventListener<T>> listeners, T comp, Entity e) where T : unmanaged, IComponentData
     {
-        void Update();
+        if (listeners != null)
+        {
+            foreach (var listener in listeners)
+            {
+                listener.OnEvent(e, comp);
+            }
+        }
     }
 
-    internal class DispatcherContainer<T> : IDispatcherContainer where T : unmanaged, IComponentData
-    {
-        readonly EntityManager _entityManager;
-        private readonly TypeIndex _typeIndex;
-        readonly EntityQuery _query;
-        readonly List<NativeQueue<T>> _queueList;
+    //interface IDispatcherContainer : IDisposable
+    //{
+    //    void Update();
+    //}
 
-        public DispatcherContainer(DispatcherSystem dispatcherSystem)
-        {
-            var componentType = ComponentType.ReadWrite<T>();
+    //internal class DispatcherContainer<T> : IDispatcherContainer where T : unmanaged, IComponentData
+    //{
+    //    readonly EntityManager _entityManager;
+    //    private readonly TypeIndex _typeIndex;
+    //    readonly EntityQuery _query;
+    //    readonly List<NativeQueue<T>> _queueList;
 
-            _entityManager = dispatcherSystem.EntityManager;
-            _query = dispatcherSystem.GetEntityQuery(componentType);
-            _typeIndex = TypeManager.GetTypeIndex(typeof(T));
-            _queueList = new List<NativeQueue<T>>();
-        }
+    //    public DispatcherContainer(DispatcherSystem dispatcherSystem)
+    //    {
+    //        var componentType = ComponentType.ReadWrite<T>();
 
-        public void Update()
-        {
-            _entityManager.DestroyEntity(_query);
+    //        _entityManager = dispatcherSystem.EntityManager;
+    //        _query = dispatcherSystem.GetEntityQuery(componentType);
+    //        _typeIndex = TypeManager.GetTypeIndex(typeof(T));
+    //        _queueList = new List<NativeQueue<T>>();
+    //    }
 
-            List<IEventListener<T>> listeners = null;
+    //    public void Update()
+    //    {
+    //        _entityManager.DestroyEntity(_query);
 
-            if (Mono.subscribers.TryGetValue(_typeIndex, out var listMono))
-            {
-                listeners = listMono.OfType<IEventListener<T>>().ToList();
-            }
+    //        List<IEventListener<T>> listeners = null;
 
-            foreach (var queue in _queueList)
-            {
-                while (queue.Count != 0)
-                {
-                    var comp = queue.Dequeue();
-                    var e = _entityManager.CreateEntity();
-                    _entityManager.AddComponentData(e, comp);
-                    ProduceMonoEvents(listeners, comp, e);
-                }
+    //        if (Mono.subscribers.TryGetValue(_typeIndex, out var listMono))
+    //        {
+    //            listeners = listMono.OfType<IEventListener<T>>().ToList();
+    //        }
 
-                queue.Dispose();
-            }
+    //        foreach (var queue in _queueList)
+    //        {
+    //            while (queue.Count != 0)
+    //            {
+    //                var comp = queue.Dequeue();
+    //                var e = _entityManager.CreateEntity();
+    //                _entityManager.AddComponentData(e, comp);
+    //                ProduceMonoEvents(listeners, comp, e);
+    //            }
 
-            _queueList.Clear();
-        }
+    //            queue.Dispose();
+    //        }
 
-        private static void ProduceMonoEvents(List<IEventListener<T>> listeners, T comp, Entity e)
-        {
-            if (listeners != null)
-            {
-                foreach (var listener in listeners)
-                {
-                    listener.OnEvent(e, comp);
-                }
-            }
-        }
+    //        _queueList.Clear();
+    //    }
 
-        public void Dispose()
-        {
-            _query.CompleteDependency();
+    //    private static void ProduceMonoEvents(List<IEventListener<T>> listeners, T comp, Entity e)
+    //    {
+    //        if (listeners != null)
+    //        {
+    //            foreach (var listener in listeners)
+    //            {
+    //                listener.OnEvent(e, comp);
+    //            }
+    //        }
+    //    }
 
-            foreach (var queue in _queueList)
-            {
-                queue.Dispose();
-            }
+    //    public void Dispose()
+    //    {
+    //        _query.CompleteDependency();
 
-            _queueList.Clear();
-        }
+    //        foreach (var queue in _queueList)
+    //        {
+    //            queue.Dispose();
+    //        }
 
-        public NativeQueue<T> CreateDispatcherQueue(Allocator allocator = Allocator.TempJob)
-        {
-            var queue = new NativeQueue<T>(allocator);
+    //        _queueList.Clear();
+    //    }
 
-            _queueList.Add(queue);
+    //    public NativeQueue<T> CreateDispatcherQueue(Allocator allocator = Allocator.TempJob)
+    //    {
+    //        var queue = new NativeQueue<T>(allocator);
 
-            return queue;
-        }
-    }
+    //        _queueList.Add(queue);
+
+    //        return queue;
+    //    }
+    //}
 
     public static class Mono
     {
