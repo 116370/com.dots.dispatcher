@@ -57,7 +57,7 @@ namespace DOTS.Dispatcher.Runtime
         {
             var e = buffer.CreateEntity();
             buffer.AddComponent(e, data);
-            buffer.AddComponent<DisaptcherClenupDestroy>(e);
+            //buffer.AddComponent<DisaptcherClenupDestroy>(e);
         }
 
         public void PostEvent<T>(Entity e, T data = default) where T : unmanaged, IComponentData, IEnableableComponent, IDisableableECSEvent

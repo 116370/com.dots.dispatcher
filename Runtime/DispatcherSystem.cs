@@ -60,10 +60,10 @@ namespace DOTS.Dispatcher.Runtime
         {
             base.OnUpdate();
 
-            foreach (var container in Mono.containers.Values)
-            {
-                container.Update();
-            }
+            //foreach (var container in Mono.containers.Values)
+            //{
+            //    container.Update();
+            //}
         }
 
         public void PostEvent<T>(T eventData = default) where T : unmanaged, IComponentData, IDestroyableECSEvent
@@ -108,7 +108,7 @@ namespace DOTS.Dispatcher.Runtime
 
         public static class Mono
         {
-            internal static Dictionary<TypeIndex, List<object>> subscribers = new();
+            public static Dictionary<TypeIndex, List<object>> subscribers = new();
             internal static Dictionary<TypeIndex, IDispatcherContainer> containers = new();
             public static void Subscribe<T1>(IEventListener<T1> listener) where T1 : unmanaged, IComponentData, IECSEvent
             {
