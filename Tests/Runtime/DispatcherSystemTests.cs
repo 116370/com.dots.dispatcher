@@ -1,98 +1,10 @@
 using DOTS.Dispatcher.Runtime;
 using NUnit.Framework;
-using System;
 using Unity.Entities;
-using Unity.Jobs;
-using UnityEditor.Search;
 using UnityEngine;
 
 namespace DOTS.Dispatcher.Tests.Runtime
 {
-    [DisableAutoCreation]
-    public partial class SpawnEventsInsideJob : SystemBase
-    {
-        public int spawnTimes;
-        protected override void OnUpdate()
-        {
-            if (spawnTimes == 0)
-                return;
-
-            Debug.Log($"SpawnEventsInsideJob {spawnTimes}");
-            var eventCommandBuffer = SystemAPI.GetSingleton<DispatcherSystem.Singleton>().CreateEventBuffer(World.Unmanaged);
-            Dependency = new SpawnJob
-            {
-                spawnTimes = spawnTimes,
-                 buffer = eventCommandBuffer
-            }.Schedule(Dependency);
-            Dependency.Complete();
-
-        }
-
-        public partial struct SpawnJob : IJob
-        {
-            public EventCommandBuffer buffer;
-            public int spawnTimes;
-
-            public void Execute()
-            {
-                for (int i = 0; i < spawnTimes; i++)
-                {
-                    buffer.PostEvent<TestEvenComponent>();
-                }   
-            }
-        }
-    }
-
-    [DisableAutoCreation]
-    public partial class SpawnEventsForeach : SystemBase
-    {
-        public int spawnTimes;
-        protected override void OnUpdate()
-        {
-            if (spawnTimes == 0)
-                return;
-            Debug.Log($"SpawnEventsForeach {spawnTimes}");
-
-            var eventCommandBuffer = SystemAPI.GetSingleton<DispatcherSystem.Singleton>().CreateEventBuffer(World.Unmanaged);
-            for (int i = 0; i < spawnTimes; i++)
-            {
-                eventCommandBuffer.PostEvent<TestEvenComponent>();
-            }
-        }
-
-    }
-
-    [DisableAutoCreation]
-    public partial class SpawnEventsInsideJobParallel : SystemBase
-    {
-        public int spawnTimes;
-        protected override void OnUpdate()
-        {
-            if (spawnTimes == 0)
-                return;
-
-            Debug.Log($"SpawnEventsInsideJobParallel {spawnTimes}");
-
-            var eventCommandBuffer = SystemAPI.GetSingleton<DispatcherSystem.Singleton>().CreateEventBuffer(World.Unmanaged);
-            Dependency = new SpawnJobParallel
-            {
-                buffer = eventCommandBuffer.AsParallelWriter()
-            }.Schedule(spawnTimes, 2, Dependency);
-
-            Dependency.Complete();
-        }
-
-        public partial struct SpawnJobParallel : IJobParallelFor
-        {
-            public EventCommandBuffer.ParallelWriter buffer;
-
-            public void Execute(int index)
-            {              
-                buffer.PostEvent<TestEvenComponent>(index);               
-            }
-        }
-    }
-
     public class DispatcherSystemTests : ECSTestsFixture
     {
         private DispatcherSystem dispatcherSystem;
@@ -121,7 +33,6 @@ namespace DOTS.Dispatcher.Tests.Runtime
             Assert.IsNotNull(dispatcherSystem);
 
         }
-
 
         [Test]
         public void TestMonoEventSupport()
