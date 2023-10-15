@@ -3,7 +3,7 @@ using Unity.Entities;
 
 namespace DOTS.Dispatcher.Runtime
 {
-    public struct DisaptcherClenup : IComponentData { }
+    public struct DisaptcherClenupDestroy : IComponentData { }
 
     [UpdateInGroup(typeof(DispatcherGroupSystem))]
     public partial struct DispatcherCleanUpSystem : ISystem
@@ -13,7 +13,7 @@ namespace DOTS.Dispatcher.Runtime
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
-            query = SystemAPI.QueryBuilder().WithAll<DisaptcherClenup>().Build();
+            query = SystemAPI.QueryBuilder().WithAll<DisaptcherClenupDestroy>().Build();
         }
 
         [BurstCompile]

@@ -1,5 +1,5 @@
 {
-    "name": "ECSTestsFixture",
+    "name": "ECSTestsFixture1",
     "rootNamespace": "",
     "references": [
         "Unity.Entities",

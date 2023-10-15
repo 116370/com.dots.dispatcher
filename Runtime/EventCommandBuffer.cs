@@ -1,3 +1,5 @@
+using Prototype;
+using System.Globalization;
 using Unity.Collections;
 using Unity.Entities;
 
@@ -6,10 +8,15 @@ namespace DOTS.Dispatcher.Runtime
     public struct EventCommandBuffer
     {
         private EntityCommandBuffer buffer;
+
         public EventCommandBuffer(Allocator allocator)
         {
             buffer = new EntityCommandBuffer(allocator);
-            buffer.AsParallelWriter();
+        }
+
+        public EventCommandBuffer(EntityCommandBuffer ecb)
+        {
+            buffer = ecb;
         }
 
         public ParallelWriter AsParallelWriter()
@@ -28,27 +35,41 @@ namespace DOTS.Dispatcher.Runtime
             {
                 var e = buffer.CreateEntity(sortKey);
                 buffer.AddComponent(sortKey, e, data);
-                buffer.AddComponent<DisaptcherClenup>(sortKey, e);
+                buffer.AddComponent<DisaptcherClenupDestroy>(sortKey, e);
 
             }
+            public void PostEvent<T>(int sortKey, Entity e, T data = default) where T : unmanaged, IComponentData, IEnableableComponent
+            {
+                buffer.AddComponent(sortKey, e, data);
+                buffer.SetComponentEnabled<T>(sortKey, e, true);
+
+            }
+            public void PostEvent<T>(int sortKey, Entity e) where T : unmanaged, IBufferElementData, IEnableableComponent
+            {
+                buffer.SetComponentEnabled<T>(sortKey, e, true);
+            }
+
         }
 
-        public EventCommandBuffer(EntityCommandBuffer ecb)
-        {
-            buffer = ecb;
-        }
+       
 
         public void PostEvent<T>(T data = default) where T : unmanaged, IComponentData
         {
             var e = buffer.CreateEntity();
             buffer.AddComponent(e, data);
-            buffer.AddComponent<DisaptcherClenup>(e);
+            buffer.AddComponent<DisaptcherClenupDestroy>(e);
+        }
+
+        public void PostEvent<T>(Entity e, T data = default) where T : unmanaged, IComponentData, IEnableableComponent
+        {          
+            buffer.AddComponent(e, data);
+            buffer.SetComponentEnabled<T>(e, true);
 
         }
 
-        public void Playback(EntityManager manager)
+        public void PostEvent<T>(Entity e) where T : unmanaged, IBufferElementData, IEnableableComponent
         {
-            buffer.Playback(manager);
+            buffer.SetComponentEnabled<T>(e, true);
         }
     }
 }
