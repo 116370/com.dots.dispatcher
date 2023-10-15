@@ -1,4 +1,5 @@
 using DOTS.Dispatcher.Runtime;
+using Prototype;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -7,7 +8,9 @@ using UnityEngine;
 /// <summary>
 /// Event component alive one frame loop 
 /// </summary>
-public struct PlayerHealthChanged : IComponentData
+[GenerateMonoEventSystem]
+[GenerateCleaUpDestroySystem]
+public struct PlayerHealthChanged : IComponentData, IDestroyableECSEvent
 {
     public PlayerHeathC Value;
 }
