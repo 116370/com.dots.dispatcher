@@ -4,15 +4,15 @@ using UnityEngine;
 
 namespace DOTS.Dispatcher.Tests.Runtime
 {
-    public struct TestEvenComponent : IComponentData
+    public struct TestEventDestroyableComponent : IComponentData, IDestroyableECSEvent
     {
         public int testData;
     }
 
-    public class TestMonoEvents : MonoBehaviour, IEventListener<TestEvenComponent>
+    public class TestMonoEvents : MonoBehaviour, IEventListener<TestEventDestroyableComponent>
     {
-        public TestEvenComponent lastEvetnData;
-        public void OnEvent(Entity entity, in TestEvenComponent data)
+        public TestEventDestroyableComponent lastEvetnData;
+        public void OnEvent(Entity entity, in TestEventDestroyableComponent data)
         {
             lastEvetnData = data;
             Debug.Log("TestMonoEvents.OnEvent");

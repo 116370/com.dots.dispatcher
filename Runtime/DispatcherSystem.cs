@@ -66,12 +66,12 @@ namespace DOTS.Dispatcher.Runtime
             }
         }
 
-        public void PostEvent<T>(T eventData = default) where T : unmanaged, IComponentData 
+        public void PostEvent<T>(T eventData = default) where T : unmanaged, IComponentData, IDestroyableECSEvent
         {
             SystemAPI.GetSingleton<Singleton>().CreateEventBuffer(World.Unmanaged).PostEvent(eventData);
         }
 
-        internal class DispatcherContainer<T> : IDispatcherContainer where T : unmanaged, IComponentData
+        internal class DispatcherContainer<T> : IDispatcherContainer where T : unmanaged, IComponentData, IECSEvent
         {
             private readonly TypeIndex _typeIndex;
             readonly EntityQuery _query;
@@ -110,7 +110,7 @@ namespace DOTS.Dispatcher.Runtime
         {
             internal static Dictionary<TypeIndex, List<object>> subscribers = new();
             internal static Dictionary<TypeIndex, IDispatcherContainer> containers = new();
-            public static void Subscribe<T1>(IEventListener<T1> listener) where T1 : unmanaged, IComponentData
+            public static void Subscribe<T1>(IEventListener<T1> listener) where T1 : unmanaged, IComponentData, IECSEvent
             {
                 var typeIndex = TypeManager.GetTypeIndex(typeof(T1));
 
@@ -129,7 +129,7 @@ namespace DOTS.Dispatcher.Runtime
                 list.Add(listener);
             }
 
-            public static void Unsubscribe<T1>(IEventListener<T1> listener) where T1 : unmanaged, IComponentData
+            public static void Unsubscribe<T1>(IEventListener<T1> listener) where T1 : unmanaged, IComponentData, IECSEvent
             {
                 var typeIndex = TypeManager.GetTypeIndex(typeof(T1));
 

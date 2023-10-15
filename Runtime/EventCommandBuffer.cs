@@ -31,14 +31,14 @@ namespace DOTS.Dispatcher.Runtime
                 buffer = bufferIn;
             }
 
-            public void PostEvent<T>(int sortKey, T data = default) where T : unmanaged, IComponentData
+            public void PostEvent<T>(int sortKey, T data = default) where T : unmanaged, IDestroyableECSEvent, IComponentData
             {
                 var e = buffer.CreateEntity(sortKey);
                 buffer.AddComponent(sortKey, e, data);
                 buffer.AddComponent<DisaptcherClenupDestroy>(sortKey, e);
-
             }
-            public void PostEvent<T>(int sortKey, Entity e, T data = default) where T : unmanaged, IComponentData, IEnableableComponent
+
+            public void PostEvent<T>(int sortKey, Entity e, T data = default) where T : unmanaged, IDisableableECSEvent, IComponentData, IEnableableComponent
             {
                 buffer.AddComponent(sortKey, e, data);
                 buffer.SetComponentEnabled<T>(sortKey, e, true);
@@ -53,21 +53,21 @@ namespace DOTS.Dispatcher.Runtime
 
        
 
-        public void PostEvent<T>(T data = default) where T : unmanaged, IComponentData
+        public void PostEvent<T>(T data = default) where T : unmanaged, IComponentData, IDestroyableECSEvent
         {
             var e = buffer.CreateEntity();
             buffer.AddComponent(e, data);
             buffer.AddComponent<DisaptcherClenupDestroy>(e);
         }
 
-        public void PostEvent<T>(Entity e, T data = default) where T : unmanaged, IComponentData, IEnableableComponent
+        public void PostEvent<T>(Entity e, T data = default) where T : unmanaged, IComponentData, IEnableableComponent, IDisableableECSEvent
         {          
             buffer.AddComponent(e, data);
             buffer.SetComponentEnabled<T>(e, true);
 
         }
 
-        public void PostEvent<T>(Entity e) where T : unmanaged, IBufferElementData, IEnableableComponent
+        public void PostEvent<T>(Entity e) where T : unmanaged, IBufferElementData, IEnableableComponent, IDestroyableECSEvent
         {
             buffer.SetComponentEnabled<T>(e, true);
         }

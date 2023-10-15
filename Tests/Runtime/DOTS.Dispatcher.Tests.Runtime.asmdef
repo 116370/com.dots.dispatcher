@@ -9,7 +9,7 @@
         "Unity.Entities",
         "DOTS.Dispatcher.Runtime",
         "Unity.Mathematics",
-        "ECSTestsFixture"
+        "ECSTestsFixture1"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

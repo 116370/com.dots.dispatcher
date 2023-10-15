@@ -34,7 +34,7 @@ namespace DOTS.Dispatcher.Tests.Runtime
             {
                 for (int i = 0; i < spawnTimes; i++)
                 {
-                    buffer.PostEvent<TestEvenComponent>();
+                    buffer.PostEvent<TestEventDestroyableComponent>();
                 }
             }
         }

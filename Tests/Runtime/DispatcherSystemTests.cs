@@ -41,7 +41,7 @@ namespace DOTS.Dispatcher.Tests.Runtime
             var testEventC = instanceGO.AddComponent<TestMonoEvents>();
         
             var expected = 10;
-            dispatcherSystem.PostEvent(new TestEvenComponent { testData = expected });
+            dispatcherSystem.PostEvent(new TestEventDestroyableComponent { testData = expected });
 
             Debug.Log("UpdateWorld");
             m_World.Update();
@@ -57,12 +57,12 @@ namespace DOTS.Dispatcher.Tests.Runtime
         [Test]
         public void CleanupEntityEventsSystem()
         {
-            var query = m_Manager.CreateEntityQuery(typeof(TestEvenComponent));
+            var query = m_Manager.CreateEntityQuery(typeof(TestEventDestroyableComponent));
 
             var expected = 0;
             Assert.AreEqual(expected, query.CalculateEntityCount());
 
-            dispatcherSystem.PostEvent<TestEvenComponent>();
+            dispatcherSystem.PostEvent<TestEventDestroyableComponent>();
             m_World.Update();
             expected = 1;
             Assert.AreEqual(expected, query.CalculateEntityCount());
@@ -76,7 +76,7 @@ namespace DOTS.Dispatcher.Tests.Runtime
         public void PostEventInsideJob()
         {
             var expected = 0;
-            var query = m_Manager.CreateEntityQuery(typeof(TestEvenComponent));
+            var query = m_Manager.CreateEntityQuery(typeof(TestEventDestroyableComponent));
             m_World.Update();
             Assert.AreEqual(expected, query.CalculateEntityCount());
 
@@ -97,7 +97,7 @@ namespace DOTS.Dispatcher.Tests.Runtime
         public void PostEventForeach()
         {
             var expected = 0;
-            var query = m_Manager.CreateEntityQuery(typeof(TestEvenComponent));
+            var query = m_Manager.CreateEntityQuery(typeof(TestEventDestroyableComponent));
             m_World.Update();
             Assert.AreEqual(expected, query.CalculateEntityCount());
 
@@ -120,7 +120,7 @@ namespace DOTS.Dispatcher.Tests.Runtime
         [Test]
         public void PostEventInsideJobParallel()
         {
-            var query = m_Manager.CreateEntityQuery(typeof(TestEvenComponent));
+            var query = m_Manager.CreateEntityQuery(typeof(TestEventDestroyableComponent));
             var expected = 0;
             m_World.Update();
             Assert.AreEqual(expected, query.CalculateEntityCount());

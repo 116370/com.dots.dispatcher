@@ -31,7 +31,7 @@ namespace DOTS.Dispatcher.Tests.Runtime
 
             public void Execute(int index)
             {
-                buffer.PostEvent<TestEvenComponent>(index);
+                buffer.PostEvent<TestEventDestroyableComponent>(index);
             }
         }
     }

@@ -17,7 +17,7 @@ namespace DOTS.Dispatcher.Tests.Runtime
             var eventCommandBuffer = SystemAPI.GetSingleton<DispatcherSystem.Singleton>().CreateEventBuffer(World.Unmanaged);
             for (int i = 0; i < spawnTimes; i++)
             {
-                eventCommandBuffer.PostEvent<TestEvenComponent>();
+                eventCommandBuffer.PostEvent<TestEventDestroyableComponent>();
             }
         }
     }

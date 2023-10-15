@@ -5,9 +5,5 @@ namespace Prototype
 {
     [UpdateInGroup(typeof(DispatcherGroupSystem))]
     [UpdateBefore(typeof(DispatcherCleanUpSystem))]
-
-    public partial class CleanupEventsSystemGroup : ComponentSystemGroup
-    {
-       
-    }
+    public partial class CleanupEventsSystemGroup : ComponentSystemGroup { }
 }
