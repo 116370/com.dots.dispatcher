@@ -1,11 +1,9 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
-using static DispatcherSystem;
 
 public struct EventCommandBuffer
 {
@@ -13,6 +11,28 @@ public struct EventCommandBuffer
     public EventCommandBuffer(Allocator allocator)
     {
         buffer = new EntityCommandBuffer(allocator);
+        buffer.AsParallelWriter();
+    }
+
+    public ParallelWriter AsParallelWriter()
+    {
+        return new ParallelWriter(buffer.AsParallelWriter());
+    }
+    public struct ParallelWriter
+    {
+        private EntityCommandBuffer.ParallelWriter buffer;
+        public ParallelWriter(EntityCommandBuffer.ParallelWriter bufferIn)
+        {
+            buffer = bufferIn;
+        }
+
+        public void PostEvent<T>(int sortKey, T data = default) where T : unmanaged, IComponentData
+        {
+            var e = buffer.CreateEntity(sortKey);
+            buffer.AddComponent(sortKey,e, data);
+            buffer.AddComponent<DisaptcherClenup>(sortKey, e);
+
+        }
     }
 
     public EventCommandBuffer(EntityCommandBuffer ecb)
@@ -24,9 +44,6 @@ public struct EventCommandBuffer
     {
         var e = buffer.CreateEntity();
         buffer.AddComponent(e, data);
-
-        var type = ComponentType.ReadWrite<T>();
-
         buffer.AddComponent<DisaptcherClenup>(e);
 
     }
@@ -199,8 +216,6 @@ public partial class DispatcherSystem : EntityCommandBufferSystem
                     containers.Remove(typeIndex);
                 }
             }
-
-
         }
     }
 }
