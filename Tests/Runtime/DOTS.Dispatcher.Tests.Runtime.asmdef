@@ -1,5 +1,5 @@
 {
-    "name": "DOTS.Dispatcher.Tests.Editor",
+    "name": "DOTS.Dispatcher.Tests.Runtime",
     "rootNamespace": "",
     "references": [
         "UnityEngine.TestRunner",
@@ -9,12 +9,9 @@
         "Unity.Entities",
         "DOTS.Dispatcher.Runtime",
         "Unity.Mathematics",
-        "ECSTestsFixture",
-        "DOTS.Dispatcher.Tests.Runtime"
+        "ECSTestsFixture"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": true,

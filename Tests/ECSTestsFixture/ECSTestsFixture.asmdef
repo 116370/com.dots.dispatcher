@@ -1,22 +1,21 @@
 {
-    "name": "DOTS.Dispatcher.Tests.Editor",
+    "name": "ECSTestsFixture",
     "rootNamespace": "",
     "references": [
-        "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner",
-        "Unity.Burst",
-        "Unity.Collections",
         "Unity.Entities",
-        "DOTS.Dispatcher.Runtime",
+        "Unity.Collections",
+        "Unity.Burst",
         "Unity.Mathematics",
-        "ECSTestsFixture",
-        "DOTS.Dispatcher.Tests.Runtime"
+        "Unity.Transforms",
+        "Unity.Collections.BurstCompatibilityGen",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
     ],
     "includePlatforms": [
         "Editor"
     ],
     "excludePlatforms": [],
-    "allowUnsafeCode": false,
+    "allowUnsafeCode": true,
     "overrideReferences": true,
     "precompiledReferences": [
         "nunit.framework.dll"
