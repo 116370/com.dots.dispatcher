@@ -1,14 +1,17 @@
 using DOTS.Dispatcher.Runtime;
+using Prototype;
 using Unity.Entities;
 using UnityEngine;
 
 namespace DOTS.Dispatcher.Tests.Runtime
 {
+    [GenerateMonoEventSystem]
     public struct TestEventDestroyableComponent : IComponentData, IDestroyableECSEvent
     {
         public int testData;
     }
 
+   
     public class TestMonoEvents : MonoBehaviour, IEventListener<TestEventDestroyableComponent>
     {
         public TestEventDestroyableComponent lastEvetnData;

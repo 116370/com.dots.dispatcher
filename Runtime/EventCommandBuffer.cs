@@ -11,6 +11,7 @@ namespace DOTS.Dispatcher.Runtime
 
         public EventCommandBuffer(Allocator allocator)
         {
+            
             buffer = new EntityCommandBuffer(allocator);
         }
 
@@ -52,7 +53,7 @@ namespace DOTS.Dispatcher.Runtime
         }
 
        
-
+        
         public void PostEvent<T>(T data = default) where T : unmanaged, IComponentData, IDestroyableECSEvent
         {
             var e = buffer.CreateEntity();
@@ -64,7 +65,6 @@ namespace DOTS.Dispatcher.Runtime
         {          
             buffer.AddComponent(e, data);
             buffer.SetComponentEnabled<T>(e, true);
-
         }
 
         public void PostEvent<T>(Entity e) where T : unmanaged, IBufferElementData, IEnableableComponent, IDestroyableECSEvent
