@@ -1,6 +1,6 @@
 using System;
 
-namespace Prototype
+namespace DOTS.Dispatcher.Runtime
 {
     /// <summary>
     /// Add Metadata to generate a system CleanUp{ComponentName}

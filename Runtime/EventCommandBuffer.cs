@@ -1,5 +1,3 @@
-using Prototype;
-using System.Globalization;
 using Unity.Collections;
 using Unity.Entities;
 

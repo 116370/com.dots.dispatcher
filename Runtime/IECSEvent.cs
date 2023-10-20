@@ -1,4 +1,3 @@
-using Prototype;
 using Unity.Entities;
 
 namespace DOTS.Dispatcher.Runtime

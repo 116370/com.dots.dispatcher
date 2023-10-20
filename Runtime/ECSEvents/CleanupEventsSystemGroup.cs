@@ -1,7 +1,7 @@
 using DOTS.Dispatcher.Runtime;
 using Unity.Entities;
 
-namespace Prototype
+namespace DOTS.Dispatcher.Runtime
 {
     [UpdateInGroup(typeof(DispatcherGroupSystem))]
     [UpdateBefore(typeof(DispatcherCleanUpSystem))]
