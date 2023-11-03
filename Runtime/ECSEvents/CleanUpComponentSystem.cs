@@ -1,17 +1,15 @@
-using System.Collections;
-using System.Collections.Generic;
 using Unity.Burst.Intrinsics;
 using Unity.Burst;
-using Unity.Collections;
 using Unity.Entities;
-using UnityEngine;
 
 namespace DOTS.Dispatcher.Runtime
 {
     /// <summary>
     /// </summary>
     /// <typeparam name="T">IECSEvent component</typeparam>
-    public partial class CleanUpComponentSystem<T> : SystemBase where T : unmanaged, IEnableableComponent, IComponentData
+    public partial class CleanUpComponentSystem<T, ECBSystem> : SystemBase
+        where T : unmanaged, IEnableableComponent, IComponentData
+        where ECBSystem : EntityCommandBufferSystem
     {
         private EntityQuery query;
 
@@ -26,16 +24,18 @@ namespace DOTS.Dispatcher.Runtime
 
         protected override void OnUpdate()
         {
-            var ecb = new EntityCommandBuffer(Allocator.TempJob);
-            new CleanUpJob
+            if (query.CalculateEntityCount() == 0)
+                return;
+
+            var ecb = World.GetOrCreateSystemManaged<ECBSystem>().CreateCommandBuffer();
+
+            Dependency = new CleanUpJob
             {
                 ecb = ecb,
                 entityHandle = SystemAPI.GetEntityTypeHandle()
 
-            }.Run(query);
-
-            ecb.Playback(EntityManager);
-            ecb.Dispose();
+            }.Schedule(query, Dependency);
+          
         }
 
         [BurstCompile]

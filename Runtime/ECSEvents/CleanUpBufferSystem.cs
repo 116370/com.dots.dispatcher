@@ -1,7 +1,5 @@
-using DOTS.Dispatcher.Runtime;
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
-using Unity.Collections;
 using Unity.Entities;
 
 namespace DOTS.Dispatcher.Runtime
@@ -10,7 +8,9 @@ namespace DOTS.Dispatcher.Runtime
     /// <summary>
     /// </summary>
     /// <typeparam name="T">IECSEvent component</typeparam>
-    public partial class CleanUpBufferSystem<T> : SystemBase where T : unmanaged, IEnableableComponent, IBufferElementData
+    public partial class CleanUpBufferSystem<T, ECBSystem> : SystemBase
+        where T : unmanaged, IEnableableComponent, IBufferElementData
+        where ECBSystem : EntityCommandBufferSystem
     {
         private EntityQuery query;
 
@@ -25,18 +25,20 @@ namespace DOTS.Dispatcher.Runtime
 
         protected override void OnUpdate()
         {
-            var ecb = new EntityCommandBuffer(Allocator.TempJob);
-            new CleanUpJob
+            if (query.CalculateEntityCount() == 0)
+                return;
+
+            var ecb = World.GetOrCreateSystemManaged<ECBSystem>().CreateCommandBuffer();
+
+            Dependency = new CleanUpJob
             {
                 ecb = ecb,
                 entityHandle = SystemAPI.GetEntityTypeHandle(),
                 bufferHandle = SystemAPI.GetBufferTypeHandle<T>()
 
 
-            }.Run(query);
+            }.Schedule(query, Dependency);
 
-            ecb.Playback(EntityManager);
-            ecb.Dispose();
         }
 
         [BurstCompile]
