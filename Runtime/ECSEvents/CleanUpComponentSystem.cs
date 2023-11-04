@@ -27,7 +27,8 @@ namespace DOTS.Dispatcher.Runtime
             if (query.CalculateEntityCount() == 0)
                 return;
 
-            var ecb = World.GetOrCreateSystemManaged<ECBSystem>().CreateCommandBuffer();
+            //var ecb = SystemAPI.GetSingleton<BeginSimulationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(World.Unmanaged);
+            var ecb = World.GetOrCreateSystemManaged<BeginSimulationEntityCommandBufferSystem>().CreateCommandBuffer();
 
             Dependency = new CleanUpJob
             {
